@@ -1,11 +1,12 @@
-
 import 'package:flutter/material.dart';
 
+import '../../../../core/network/api_client.dart';
+import '../../../../core/theme.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
-import '../../../../core/theme.dart';
 import '../../../main_navigation/screens/main_navigation_screen.dart';
 import '../../sign_up/screens/sign_up_screen.dart';
+import '../services/login_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,13 +19,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController emailController;
   late final TextEditingController passwordController;
+  late final LoginService loginService;
+  bool isLoading = false;
 
   @override
   void initState() {
+    super.initState();
     emailController = TextEditingController();
     passwordController = TextEditingController();
-
-    super.initState();
+    loginService = LoginService();
   }
 
   @override
@@ -32,6 +35,59 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
+
+      await loginService.login(email: email, password: password);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login successful!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const MainNavigationScreen(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final errorMessage = ApiClient.formatDioError(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _fillDemoCredentials() {
+    emailController.text = 'john@mail.com';
+    passwordController.text = 'changeme';
   }
 
   @override
@@ -51,25 +107,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
                 Text(
                   'Welcome Back!',
-                  style: Theme.of(context).textTheme.displayLarge
-                      ?.copyWith(fontSize: 32),
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 32),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Login to continue your shopping',
-                  style: Theme.of(context).textTheme.bodyMedium
-                      ?.copyWith(fontSize: 16),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 64),
+                const SizedBox(height: 48),
                 CustomTextField(
                   controller: emailController,
                   hintText: 'Email Address',
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
                     if (!value.contains('@')) {
@@ -88,41 +142,48 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
                     }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                    if (value.length < 4) {
+                      return 'Password must be at least 4 characters';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w600,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: _fillDemoCredentials,
+                      child: Text(
+                        'Fill Demo Account',
+                        style: TextStyle(
+                          color: AppTheme.primary.withValues(alpha: 0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
                     ),
-                  ),
+                    Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
                 PrimaryButton(
                   text: 'Login',
-                  onPressed: () {
-                    if (_formKey.currentState?.validate() ?? false) {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => MainNavigationScreen(),
-                        ),
-                      );
-                    }
-                  },
+                  isLoading: isLoading,
+                  onPressed: _handleLogin,
                 ),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Don\'t have an account? '),
+                    const Text("Don't have an account? "),
                     GestureDetector(
                       onTap: () {
                         Navigator.pushReplacement(
@@ -133,18 +194,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               animation,
                               secondaryAnimation,
                             ) => const SignUpScreen(),
-                            transitionsBuilder:
-                                (
-                                  context,
-                                  animation,
-                                  secondaryAnimation,
-                                  child,
-                                ) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  );
-                                },
+                            transitionsBuilder: (
+                              context,
+                              animation,
+                              secondaryAnimation,
+                              child,
+                            ) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              );
+                            },
                           ),
                         );
                       },

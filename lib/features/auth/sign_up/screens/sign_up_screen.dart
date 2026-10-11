@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/network/api_client.dart';
+import '../../../../core/theme.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
-import '../../../../core/theme.dart';
 import '../../login/screens/login_screen.dart';
+import '../models/signup_req_model.dart';
+import '../services/signup_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -17,14 +20,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
   late final TextEditingController nameController;
   late final TextEditingController emailController;
   late final TextEditingController passwordController;
+  late final SignupService signupService;
+  bool isLoading = false;
 
   @override
   void initState() {
+    super.initState();
     nameController = TextEditingController();
     emailController = TextEditingController();
     passwordController = TextEditingController();
-
-    super.initState();
+    signupService = SignupService();
   }
 
   @override
@@ -33,6 +38,63 @@ class _SignUpScreenState extends State<SignUpScreen> {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleSignUp() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final name = nameController.text.trim();
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
+
+      await signupService.signUp(
+        SignupReqModel(
+          name: name,
+          email: email,
+          password: password,
+          avatar: 'https://picsum.photos/800',
+        ),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully! Please login.'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final errorMessage = ApiClient.formatDioError(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -52,15 +114,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 32),
                 Text(
                   'Create Account',
-                  style: Theme.of(context).textTheme.displayLarge
-                      ?.copyWith(fontSize: 32),
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 32),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign up to get started',
-                  style: Theme.of(context).textTheme.bodyMedium
-                      ?.copyWith(fontSize: 16),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
@@ -69,7 +129,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   hintText: 'Full Name',
                   prefixIcon: Icons.person_outline,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your full name';
                     }
                     return null;
@@ -82,7 +142,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
                     }
                     if (!value.contains('@')) {
@@ -101,8 +161,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
                     }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
+                    if (value.length < 4) {
+                      return 'Password must be at least 4 characters';
                     }
                     return null;
                   },
@@ -110,16 +170,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 40),
                 PrimaryButton(
                   text: 'Sign Up',
-                  onPressed: () async {
-                    if (_formKey.currentState?.validate() ?? false) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                      );
-                    }
-                  },
+                  isLoading: isLoading,
+                  onPressed: _handleSignUp,
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -136,18 +188,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               animation,
                               secondaryAnimation,
                             ) => const LoginScreen(),
-                            transitionsBuilder:
-                                (
-                                  context,
-                                  animation,
-                                  secondaryAnimation,
-                                  child,
-                                ) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  );
-                                },
+                            transitionsBuilder: (
+                              context,
+                              animation,
+                              secondaryAnimation,
+                              child,
+                            ) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              );
+                            },
                           ),
                         );
                       },
