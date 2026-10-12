@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/dummy_data.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/custom_network_image.dart';
 import '../../details/screens/product_details_screen.dart';
 
 class ProductCard extends StatelessWidget {
@@ -46,14 +47,12 @@ class ProductCard extends StatelessWidget {
                 children: [
                   Hero(
                     tag: 'product-${product.id}',
-                    child: ClipRRect(
+                    child: CustomNetworkImage(
+                      imageUrl: product.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                      child: Image.network(
-                        product.imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
                     ),
                   ),
                   Positioned(

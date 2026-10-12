@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/dummy_data.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/custom_network_image.dart';
 import '../widgets/color_selector.dart';
 import '../widgets/size_selector.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -63,8 +64,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             flexibleSpace: FlexibleSpaceBar(
               background: Hero(
                 tag: 'product-${widget.product.id}',
-                child: Image.network(
-                  widget.product.imageUrl,
+                child: CustomNetworkImage(
+                  imageUrl: widget.product.imageUrl,
                   fit: BoxFit.cover,
                 ),
               ),
