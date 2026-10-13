@@ -1,30 +1,17 @@
-import 'package:dio/dio.dart';
-import '../../../core/constants/api_endpoints.dart';
-import '../../../core/network/api_client.dart';
-import '../models/category_model.dart';
-import '../models/product_model.dart';
+import '../../../../core/network/api_client.dart';
+import '../data/datasources/home_remote_data_source.dart';
+import '../data/models/category_model.dart';
+import '../data/models/product_model.dart';
 
+@Deprecated('Use HomeRepository or UseCases instead')
 class HomeService {
-  final ApiClient apiClient;
+  final HomeRemoteDataSource remoteDataSource;
 
-  HomeService([ApiClient? client]) : apiClient = client ?? ApiClient();
+  HomeService([ApiClient? client])
+      : remoteDataSource = HomeRemoteDataSourceImpl(client);
 
   Future<List<CategoryModel>> getCategories() async {
-    try {
-      final response = await apiClient.dio.get(ApiEndpoints.categories);
-      if (response.data is List) {
-        final list = response.data as List;
-        return list
-            .map((e) => CategoryModel.fromJson(e as Map<String, dynamic>))
-            .where((cat) => cat.name.trim().isNotEmpty)
-            .toList();
-      }
-      return [];
-    } on DioException catch (e) {
-      throw ApiClient.formatDioError(e);
-    } catch (e) {
-      throw 'Failed to load categories: $e';
-    }
+    return await remoteDataSource.getCategories();
   }
 
   Future<List<ProductModel>> getProducts({
@@ -33,36 +20,11 @@ class HomeService {
     int limit = 40,
     int offset = 0,
   }) async {
-    try {
-      final Map<String, dynamic> queryParams = {
-        'limit': limit,
-        'offset': offset,
-      };
-
-      if (categoryId != null && categoryId > 0) {
-        queryParams['categoryId'] = categoryId;
-      }
-
-      if (search != null && search.trim().isNotEmpty) {
-        queryParams['title'] = search.trim();
-      }
-
-      final response = await apiClient.dio.get(
-        ApiEndpoints.products,
-        queryParameters: queryParams,
-      );
-
-      if (response.data is List) {
-        final list = response.data as List;
-        return list
-            .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
-    } on DioException catch (e) {
-      throw ApiClient.formatDioError(e);
-    } catch (e) {
-      throw 'Failed to load products: $e';
-    }
+    return await remoteDataSource.getProducts(
+      categoryId: categoryId,
+      search: search,
+      limit: limit,
+      offset: offset,
+    );
   }
 }

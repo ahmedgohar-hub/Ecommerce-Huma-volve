@@ -1,52 +1,33 @@
-import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../../core/network/auth_session.dart';
-import '../../models/user_profile_model.dart';
-import '../models/login_model.dart';
+import '../../data/datasources/auth_remote_data_source.dart';
+import '../../data/models/login_model.dart';
+import '../../data/models/user_profile_model.dart';
+import '../../data/repositories/auth_repository_impl.dart';
 
+@Deprecated('Use AuthRepository or UseCases instead')
 class LoginService {
-  final ApiClient apiClient;
+  final AuthRepositoryImpl _authRepository;
+  final AuthRemoteDataSource _remoteDataSource;
 
-  LoginService([ApiClient? client]) : apiClient = client ?? ApiClient();
+  LoginService([ApiClient? client])
+      : _remoteDataSource = AuthRemoteDataSourceImpl(client),
+        _authRepository = AuthRepositoryImpl(AuthRemoteDataSourceImpl(client));
 
   Future<LoginModel> login({
     required String email,
     required String password,
   }) async {
-    final response = await apiClient.dio.post(
-      ApiEndpoints.login,
-      data: {
-        'email': email,
-        'password': password,
-      },
+    final token = await _authRepository.login(
+      email: email,
+      password: password,
     );
-
-    final loginData = LoginModel.fromJson(response.data as Map<String, dynamic>);
-
-    // Store active tokens in session
-    AuthSession.setTokens(
-      access: loginData.accessToken,
-      refresh: loginData.refreshToken,
+    return LoginModel(
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
     );
-
-    // Optionally fetch user profile to populate session
-    try {
-      final profile = await getProfile();
-      AuthSession.userId = profile.id;
-      AuthSession.userName = profile.name;
-      AuthSession.userEmail = profile.email;
-      AuthSession.userAvatar = profile.avatar;
-    } catch (_) {
-      // Continue even if profile fetching fails
-    }
-
-    return loginData;
   }
 
   Future<UserProfileModel> getProfile() async {
-    final response = await apiClient.dio.get(
-      ApiEndpoints.profile,
-    );
-    return UserProfileModel.fromJson(response.data as Map<String, dynamic>);
+    return await _remoteDataSource.getProfile();
   }
 }
