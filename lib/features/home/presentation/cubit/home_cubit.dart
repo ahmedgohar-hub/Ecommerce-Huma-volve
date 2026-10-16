@@ -23,17 +23,26 @@ class HomeCubit extends Cubit<HomeState> {
             GetProductsUseCase(HomeRepositoryImpl(HomeRemoteDataSourceImpl())),
         super(const HomeState());
 
+  // ── Initial load ──────────────────────────────────────────────────────────
+  /// Fetches categories and the first page of products simultaneously.
   Future<void> loadInitialData() async {
     emit(state.copyWith(
       status: HomeStatus.loading,
       error: null,
       isProductsLoading: true,
+      // Reset pagination on every full reload
+      currentPage: 0,
+      hasReachedMax: false,
+      isLoadingMore: false,
     ));
 
     try {
       final results = await Future.wait([
         _getCategoriesUseCase(const NoParams()),
-        _getProductsUseCase(const GetProductsParams()),
+        _getProductsUseCase(const GetProductsParams(
+          limit: kProductsPageSize,
+          offset: 0,
+        )),
       ]);
 
       final categories = results[0] as List<CategoryEntity>;
@@ -45,6 +54,10 @@ class HomeCubit extends Cubit<HomeState> {
         products: products,
         isProductsLoading: false,
         error: null,
+        currentPage: 0,
+        // If the first batch is already smaller than a full page → no more data
+        hasReachedMax: products.length < kProductsPageSize,
+        isLoadingMore: false,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -55,16 +68,60 @@ class HomeCubit extends Cubit<HomeState> {
     }
   }
 
-  Future<void> selectCategory(int? categoryId) async {
-    if (state.selectedCategoryId == categoryId && !state.isError) {
+  // ── Pagination ────────────────────────────────────────────────────────────
+  /// Loads the next page and **appends** results to the existing list.
+  /// Does nothing if already loading or the end has been reached.
+  Future<void> loadMoreProducts() async {
+    // Guard: skip if a load is already running or no more data exists
+    if (state.isLoadingMore || state.hasReachedMax || state.isProductsLoading) {
       return;
     }
+
+    final nextPage = state.currentPage + 1;
+    final nextOffset = nextPage * kProductsPageSize;
+
+    emit(state.copyWith(isLoadingMore: true, error: null));
+
+    try {
+      final newProducts = await _getProductsUseCase(
+        GetProductsParams(
+          categoryId: state.selectedCategoryId,
+          search: state.searchQuery.isEmpty ? null : state.searchQuery,
+          limit: kProductsPageSize,
+          offset: nextOffset,
+        ),
+      );
+
+      emit(state.copyWith(
+        status: HomeStatus.success,
+        // Append new items to the existing list
+        products: [...state.products, ...newProducts],
+        isLoadingMore: false,
+        error: null,
+        currentPage: nextPage,
+        hasReachedMax: newProducts.length < kProductsPageSize,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isLoadingMore: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  // ── Category filter ───────────────────────────────────────────────────────
+  Future<void> selectCategory(int? categoryId) async {
+    if (state.selectedCategoryId == categoryId && !state.isError) return;
 
     emit(state.copyWith(
       selectedCategoryId: categoryId,
       clearCategory: categoryId == null,
       isProductsLoading: true,
       error: null,
+      // Reset pagination when filter changes
+      currentPage: 0,
+      hasReachedMax: false,
+      isLoadingMore: false,
     ));
 
     await _fetchFilteredProducts(
@@ -73,6 +130,7 @@ class HomeCubit extends Cubit<HomeState> {
     );
   }
 
+  // ── Search ────────────────────────────────────────────────────────────────
   void onSearchChanged(String query) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -85,6 +143,10 @@ class HomeCubit extends Cubit<HomeState> {
       searchQuery: query,
       isProductsLoading: true,
       error: null,
+      // Reset pagination on new search
+      currentPage: 0,
+      hasReachedMax: false,
+      isLoadingMore: false,
     ));
 
     await _fetchFilteredProducts(
@@ -93,6 +155,9 @@ class HomeCubit extends Cubit<HomeState> {
     );
   }
 
+  // ── Internal helpers ──────────────────────────────────────────────────────
+  /// Always resets to page 0 and replaces the product list (used after a
+  /// filter or search change).
   Future<void> _fetchFilteredProducts({
     int? categoryId,
     String? search,
@@ -102,6 +167,8 @@ class HomeCubit extends Cubit<HomeState> {
         GetProductsParams(
           categoryId: categoryId,
           search: search,
+          limit: kProductsPageSize,
+          offset: 0,
         ),
       );
 
@@ -110,6 +177,9 @@ class HomeCubit extends Cubit<HomeState> {
         products: products,
         isProductsLoading: false,
         error: null,
+        currentPage: 0,
+        hasReachedMax: products.length < kProductsPageSize,
+        isLoadingMore: false,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -119,6 +189,7 @@ class HomeCubit extends Cubit<HomeState> {
     }
   }
 
+  // ── Retry ─────────────────────────────────────────────────────────────────
   void retry() {
     if (state.categories.isEmpty) {
       loadInitialData();
@@ -126,6 +197,9 @@ class HomeCubit extends Cubit<HomeState> {
       emit(state.copyWith(
         isProductsLoading: true,
         error: null,
+        currentPage: 0,
+        hasReachedMax: false,
+        isLoadingMore: false,
       ));
       _fetchFilteredProducts(
         categoryId: state.selectedCategoryId,
