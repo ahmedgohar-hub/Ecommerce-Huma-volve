@@ -31,9 +31,6 @@ class _HomeScreenView extends StatefulWidget {
 
 class _HomeScreenViewState extends State<_HomeScreenView> {
   late final TextEditingController _searchController;
-
-  /// Controls the main scroll view; used to detect when the user
-  /// reaches the bottom of the list so we can trigger the next page.
   late final ScrollController _scrollController;
 
   @override
@@ -42,7 +39,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
     _searchController = TextEditingController();
     _scrollController = ScrollController();
 
-    // Attach the scroll listener AFTER the first frame so the cubit is ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.addListener(_onScroll);
     });
@@ -57,15 +53,11 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
     super.dispose();
   }
 
-  // ── Scroll listener ───────────────────────────────────────────────────────
-  /// Fires [HomeCubit.loadMoreProducts] when the user scrolls within
-  /// 200 px of the bottom edge.
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final maxExtent = _scrollController.position.maxScrollExtent;
     final currentExtent = _scrollController.offset;
 
-    // Trigger load when 200 px away from the bottom
     if (currentExtent >= maxExtent - 200) {
       context.read<HomeCubit>().loadMoreProducts();
     }
@@ -97,7 +89,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
             return CustomScrollView(
               controller: _scrollController,
               slivers: [
-                // ── Header (search + categories) ────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
@@ -229,7 +220,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
                           ),
                         ),
                         const SizedBox(height: 24),
-
                         SizedBox(
                           height: 44,
                           child: ListView.separated(
@@ -259,8 +249,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
                     ),
                   ),
                 ),
-
-                // ── Filter / search loading bar ─────────────────────────────
                 if (state.isProductsLoading && state.products.isNotEmpty)
                   const SliverToBoxAdapter(
                     child: Padding(
@@ -273,15 +261,10 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
                       ),
                     ),
                   ),
-
-                // ── Products grid ───────────────────────────────────────────
                 _buildProductSliverContent(context, state, cubit),
-
-                // ── "Load more" indicator ───────────────────────────────────
                 SliverToBoxAdapter(
                   child: _buildPaginationFooter(state),
                 ),
-
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
               ],
             );
@@ -291,9 +274,7 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
     );
   }
 
-  // ── Pagination footer ─────────────────────────────────────────────────────
   Widget _buildPaginationFooter(HomeState state) {
-    // Spinner: next page is being fetched
     if (state.isLoadingMore) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
@@ -306,7 +287,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
       );
     }
 
-    // End-of-list label (only when the list has items and the max is reached)
     if (state.hasReachedMax && state.products.isNotEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
@@ -333,13 +313,11 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
     return const SizedBox.shrink();
   }
 
-  // ── Products grid content ─────────────────────────────────────────────────
   Widget _buildProductSliverContent(
     BuildContext context,
     HomeState state,
     HomeCubit cubit,
   ) {
-    // Full-screen initial loader
     if (state.isLoading && state.products.isEmpty) {
       return const SliverToBoxAdapter(
         child: Padding(
@@ -367,7 +345,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
       );
     }
 
-    // Error with empty list
     if (state.error != null && state.products.isEmpty) {
       return SliverToBoxAdapter(
         child: Padding(
@@ -435,7 +412,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
       );
     }
 
-    // Empty results
     if (state.products.isEmpty && !state.isProductsLoading) {
       return SliverToBoxAdapter(
         child: Padding(
@@ -495,7 +471,6 @@ class _HomeScreenViewState extends State<_HomeScreenView> {
       );
     }
 
-    // ── Products 2-column grid ──────────────────────────────────────────────
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       sliver: SliverGrid(

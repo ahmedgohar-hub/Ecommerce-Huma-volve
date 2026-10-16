@@ -3,7 +3,6 @@ import '../../domain/entities/product_entity.dart';
 
 enum HomeStatus { initial, loading, success, error }
 
-/// Number of products fetched per page.
 const int kProductsPageSize = 10;
 
 class HomeState {
@@ -14,18 +13,9 @@ class HomeState {
   final String searchQuery;
   final String? error;
   final bool isProductsLoading;
-
-  // ── Pagination ──────────────────────────────────────────────────────
-  /// The current page index (0-based offset pages).
   final int currentPage;
-
-  /// True when the last API call returned fewer items than [kProductsPageSize],
-  /// meaning there are no more pages to load.
   final bool hasReachedMax;
-
-  /// True while a "load more" request is in-flight (bottom of list spinner).
   final bool isLoadingMore;
-  // ────────────────────────────────────────────────────────────────────
 
   const HomeState({
     this.status = HomeStatus.initial,
