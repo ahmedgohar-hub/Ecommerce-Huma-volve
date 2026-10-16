@@ -9,25 +9,19 @@ import '../network/api_client.dart';
 import '../../features/home/data/models/product_model.dart';
 import 'package:dio/dio.dart';
 
-/// Named route constants used throughout the app.
 class AppRoutes {
   static const String splash = '/';
   static const String home = '/home';
   static const String productDetails = '/product/:id';
 
-  /// Builds a typed URI for a product deep link.
-  ///
-  /// e.g. `/product/42`
   static String productDetailsPath(String productId) => '/product/$productId';
 }
 
-/// Central router that maps named routes to screens and handles parsing.
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     final name = settings.name ?? '/';
     final uri = Uri.tryParse(name);
 
-    // ── /product/<id> ─────────────────────────────────────────────────────
     if (uri != null && uri.pathSegments.length == 2 && uri.pathSegments.first == 'product') {
       final idStr = uri.pathSegments[1];
       final productId = int.tryParse(idStr);
@@ -37,7 +31,6 @@ class AppRouter {
       }
     }
 
-    // ── /home ─────────────────────────────────────────────────────────────
     if (name == AppRoutes.home) {
       return MaterialPageRoute(
         builder: (_) => const MainNavigationScreen(),
@@ -45,15 +38,12 @@ class AppRouter {
       );
     }
 
-    // ── Fallback ──────────────────────────────────────────────────────────
     return MaterialPageRoute(
       builder: (_) => const SplashScreen(),
       settings: settings,
     );
   }
 }
-
-// ── Internal route that fetches the product then renders the details screen ──
 
 class _DeepLinkProductRoute extends MaterialPageRoute<void> {
   _DeepLinkProductRoute({required int productId})
@@ -62,8 +52,6 @@ class _DeepLinkProductRoute extends MaterialPageRoute<void> {
         );
 }
 
-/// Fetches a single product by ID and renders [ProductDetailsScreen].
-/// Shows a loader while fetching and an error page on failure.
 class _ProductDeepLinkScreen extends StatefulWidget {
   final int productId;
   const _ProductDeepLinkScreen({required this.productId});
@@ -117,8 +105,6 @@ class _ProductDeepLinkScreenState extends State<_ProductDeepLinkScreen> {
   }
 }
 
-// ── Loading screen ─────────────────────────────────────────────────────────
-
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen();
 
@@ -141,8 +127,6 @@ class _LoadingScreen extends StatelessWidget {
     );
   }
 }
-
-// ── Error screen ───────────────────────────────────────────────────────────
 
 class _ErrorScreen extends StatelessWidget {
   final String message;

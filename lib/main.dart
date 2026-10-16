@@ -5,14 +5,11 @@ import 'core/router/app_router.dart';
 import 'core/theme.dart';
 import 'features/splash/screens/splash_screen.dart';
 
-/// A single, app-wide navigator key used by [DeepLinkService] so it can push
-/// routes even when there is no BuildContext available (e.g. cold-start).
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialise deep-link handling before the first frame is drawn.
   final deepLinkService = DeepLinkService(navigatorKey: navigatorKey);
   await deepLinkService.init();
 
@@ -41,12 +38,8 @@ class _MyAppState extends State<MyApp> {
       title: 'Huma Volve',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-
-      // ── Deep-link & routing ────────────────────────────────────────────
       navigatorKey: navigatorKey,
       onGenerateRoute: AppRouter.generateRoute,
-      // ──────────────────────────────────────────────────────────────────
-
       home: const SplashScreen(),
     );
   }
