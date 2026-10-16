@@ -6,7 +6,6 @@ import '../../features/main_navigation/screens/main_navigation_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
 import '../errors/exceptions.dart';
 import '../network/api_client.dart';
-import '../../features/home/data/datasources/home_remote_data_source.dart';
 import '../../features/home/data/models/product_model.dart';
 import 'package:dio/dio.dart';
 

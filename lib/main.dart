@@ -20,9 +20,9 @@ Future<void> main() async {
 }
 
 class MyApp extends StatefulWidget {
-  final DeepLinkService deepLinkService;
+  final DeepLinkService? deepLinkService;
 
-  const MyApp({super.key, required this.deepLinkService});
+  const MyApp({super.key, this.deepLinkService});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -31,7 +31,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   void dispose() {
-    widget.deepLinkService.dispose();
+    widget.deepLinkService?.dispose();
     super.dispose();
   }
 
